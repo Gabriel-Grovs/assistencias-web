@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Assistências</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <h1>Sistema de Assistências</h1>
+        <a class="logout" href="{{ url_for('logout') }}">Sair</a>
+    </header>
+
+    <main class="container">
+        <section class="input-panel">
+            <label for="texto">Cole o texto da assistência abaixo:</label>
+            <textarea id="texto" placeholder="Cole aqui o conteúdo copiado do portal da seguradora..."></textarea>
+            <button id="processar" type="button">Processar</button>
+        </section>
+
+        <section id="resultado" class="result-panel" hidden>
+            <h2>Resultado</h2>
+            <p id="produto" class="produto"></p>
+            <table class="resultado-table">
+                <tbody id="campos"></tbody>
+            </table>
+            <p id="gravacao" class="gravacao"></p>
+            <p id="obs" class="obs"></p>
+        </section>
+    </main>
+
+    <script>
+        const FIELDS = [
+            ["DATA", "DATA"],
+            ["CLIENTE", "CLIENTE"],
+            ["ASSISTENCIA", "ASSISTENCIA"],
+            ["CATEGORIA", "CATEGORIA"],
+            ["ORIGEM", "ORIGEM"],
+            ["DESTINO", "DESTINO"],
+            ["KM TOTAL", "KM TOTAL"],
+            ["VALOR", "VALOR"],
+            ["OBS", "OBS"]
+        ];
+
+        const PRODUTO_LABELS = {
+            allianz: "ALLIANZ", azul: "AZUL", bradesco: "BRADESCO",
+            caoa_chery: "CAOA CHERY", fca_fiat: "FCA FIAT", hdi: "HDI",
+            movida: "MOVIDA", porto: "PORTO", resolve_assist: "RESOLVE ASSIST",
+            santander: "SANTANDER", suhai: "SUHAI", sura: "SURA",
+            tato_assist: "TATO ASSIST", tokio: "TOKIO", universo_agv: "UNIVERSO AGV",
+            velox: "VELOX", yelum: "YELUM", youse: "YOUSE", unknown: "DESCONHECIDO"
+        };
+
+        document.getElementById("processar").addEventListener("click", async function () {
+            const texto = document.getElementById("texto").value;
+            const resultado = document.getElementById("resultado");
+            const produto = document.getElementById("produto");
+            const campos = document.getElementById("campos");
+            const gravacao = document.getElementById("gravacao");
+            const obs = document.getElementById("obs");
+
+            if (!texto.trim()) {
+                resultado.hidden = false;
+                produto.textContent = "Erro";
+                produto.classList.add("erro");
+                campos.innerHTML = "";
+                gravacao.textContent = "Texto vazio";
+                obs.textContent = "";
+                return;
+            }
+
+            const form = new FormData();
+            form.append("texto", texto);
+
+            try {
+                const response = await fetch("/processar", { method: "POST", body: form });
+                const data = await response.json();
+
+                if (!data.ok) {
+                    resultado.hidden = false;
+                    produto.textContent = "Erro";
+                    produto.classList.add("erro");
+                    campos.innerHTML = "";
+                    gravacao.textContent = data.erro || "Erro ao processar";
+                    obs.textContent = "";
+                    return;
+                }
+
+                const registro = data.registro;
+                produto.textContent = "Produto identificado: " +
+                    (PRODUTO_LABELS[registro.PRODUTO] || registro.PRODUTO);
+                produto.classList.remove("erro");
+
+                campos.innerHTML = "";
+                for (const [label, key] of FIELDS) {
+                    const value = registro[key] || "";
+                    const row = document.createElement("tr");
+                    const th = document.createElement("th");
+                    th.textContent = label;
+                    const td = document.createElement("td");
+                    td.textContent = value;
+
+                    if (key === "ORIGEM" || key === "DESTINO") {
+                        td.classList.add("destaque");
+                    }
+                    row.appendChild(th);
+                    row.appendChild(td);
+                    campos.appendChild(row);
+                }
+
+                const sheets = data.sheets || {};
+                if (sheets.ok) {
+                    gravacao.textContent = "Gravado no Google Sheets — linha " + sheets.linha;
+                    gravacao.classList.remove("erro");
+                    gravacao.classList.add("sucesso");
+                } else {
+                    gravacao.textContent = "Aviso: " + (sheets.erro || "não gravado");
+                    gravacao.classList.remove("sucesso");
+                    gravacao.classList.add("erro");
+                }
+
+                const obsValue = registro["OBS"] || "";
+                if (obsValue) {
+                    obs.textContent = "Alertas: " + obsValue;
+                } else {
+                    obs.textContent = "";
+                }
+
+                resultado.hidden = false;
+            } catch (err) {
+                resultado.hidden = false;
+                produto.textContent = "Erro";
+                produto.classList.add("erro");
+                campos.innerHTML = "";
+                gravacao.textContent = "Falha na comunicação com o servidor";
+                obs.textContent = "";
+            }
+        });
+    </script>
+</body>
+</html>
