@@ -20,7 +20,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 app.config["SESSION_PERMANENT"] = False
 
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+APP_PASSWORD = os.environ.get("APP_PASSWORD") or "123gabriel"
 
 
 def login_required(view):
@@ -68,8 +68,6 @@ def processar():
 
     record = extract_record(text)
 
-    sheet_result = {"ok": False, "erro": "Google Sheets nao configurado"}
-    if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
-        sheet_result = append_row(record)
+    sheet_result = append_row(record)
 
     return jsonify({"ok": True, "registro": record, "sheets": sheet_result})

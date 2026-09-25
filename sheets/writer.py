@@ -46,8 +46,8 @@ def append_row(record):
     Retorna ``{"ok": True, "linha": N}`` em caso de sucesso ou
     ``{"ok": False, "erro": ...}`` em caso de falha (sem lançar exceção).
     """
-    sheet_id = os.environ.get("GOOGLE_SHEET_ID", "")
-    tab = os.environ.get("GOOGLE_SHEET_TAB", "Assistencias")
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID") or "1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8"
+    tab = os.environ.get("GOOGLE_SHEET_TAB") or "Assistencias"
 
     if not sheet_id:
         return {"ok": False, "erro": "GOOGLE_SHEET_ID nao configurada"}
