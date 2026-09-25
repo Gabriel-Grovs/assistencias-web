@@ -30,6 +30,7 @@ _PRODUCT_MODULES = {
     "velox": "velox",
     "yelum": "yelum",
     "youse": "youse",
+    "unidas": "unidas",
     "unknown": "unknown",
 }
 

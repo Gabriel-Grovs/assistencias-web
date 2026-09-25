@@ -19,41 +19,46 @@ def identify(text):
         return "unknown"
 
     normalized = strip_accents(text).upper()
+    # Remove marcação de negrito/itálico do WhatsApp (*, _)
+    clean_text = re.sub(r"[*_~]", "", normalized)
 
     # TOKIO: "Ordem de Serviço" + token iniciado por "OS".
-    if re.search(r"ORDEM DE SERVIC", normalized) and re.search(r"\bOS\d", normalized):
+    if re.search(r"ORDEM DE SERVIC", clean_text) and re.search(r"\bOS\d", clean_text):
         return "tokio"
 
-    # Ordem de prioridade (briefing, seção 6).
+    # Ordem de prioridade (briefing, seção 6 + histórico real).
     rules = [
         ("allianz", ["ALLIANZ"]),
         ("azul", ["AZUL SEGUROS"]),
-        ("bradesco", ["BRADESCO AUTORE"]),
-        ("caoa_chery", ["CAOA"]),
+        ("bradesco", ["BRADESCO AUTORE", "BRADESCO SEGUROS", "BRADESCO"]),
+        ("caoa_chery", ["CAOA CHERY", "CAOA MONTADORA", "CAOA"]),
         ("fca_fiat", ["FCA FIAT", "FIAT CHRYSLER"]),
-        ("hdi", ["HDI SEGUROS"]),
+        ("hdi", ["HDI SEGUROS", "HDI"]),
         ("movida", ["MOVIDA PARTICIPACOES", "MOVIDA"]),
-        ("porto", ["PORTO SERVICO", "PORTO SEGURO"]),
+        ("porto", ["PORTO SERVICO", "PORTO SEGURO", "LAUDO DE SERVICO - PORTO", "EMPRESA\tPORTO", "EMPRESA PORTO", "LAUDO DIGITAL", "PORTO"]),
         ("resolve_assist", ["RESOLVE ASSIST"]),
-        ("santander", ["SANTANDER AUTO"]),
-        ("suhai", ["SUHAI SEGURADORA"]),
-        ("sura", ["SURA SEGUROS"]),
+        ("santander", ["SANTANDER AUTO", "SANTANDER"]),
+        ("suhai", ["SUHAI SEGURADORA", "SUHAI"]),
+        ("sura", ["SURA SEGUROS", "SURA"]),
         ("tato_assist", ["TATO ASSIST"]),
         ("universo_agv", ["UNIVERSO AGV", "UNIVERSOAGV"]),
         ("velox", ["VELOX"]),
         ("yelum", ["YELUM"]),
-        ("youse", ["YOUSE SEGUROS"]),
+        ("youse", ["YOUSE SEGUROS", "YOUSE"]),
+        ("unidas", ["UNIDAS"]),
     ]
 
     for key, patterns in rules:
         for pattern in patterns:
-            if re.search(accent_insensitive(pattern), text, re.IGNORECASE):
+            # Testa tanto no texto original quanto no limpo
+            if re.search(r"\b" + accent_insensitive(pattern) + r"\b", clean_text, re.IGNORECASE) or \
+               re.search(accent_insensitive(pattern), text, re.IGNORECASE):
                 return key
 
-    # Fallbacks por protocolo (sem marca explícita no corpo).
-    if re.search(r"\bRES\d", normalized):
+    # Fallbacks por protocolo (sem marca explícita no corpo, inclusive via WhatsApp).
+    if re.search(r"\bRES\d", clean_text):
         return "resolve_assist"
-    if re.search(r"PROTOCOLO\s*[:=]\s*202", normalized):
+    if re.search(r"PROTOCOLO\s*[:=]\s*202", clean_text):
         return "tato_assist"
 
     return "unknown"
