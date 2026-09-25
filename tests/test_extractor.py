@@ -360,6 +360,91 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["KM TOTAL"], "110")
         self.assertEqual(r["VALOR"], "400")
 
+    def test_tokio_residencial(self):
+        texto = (
+            "Ordem de Serviço | Detalhe\n"
+            "Ordem de Serviço: OS8281532\n"
+            "Numero da Assistência: 8514808\n"
+            "Prestador: AUTO SOCORRO JM\n"
+            "Dt Agendamento: 26/09/2026 13:00:00\n"
+            "Tipo de Serviço: FIXAÇÕES GERAIS\n"
+            "Tipo de Evento: INSPECAO DOMICILIAR\n"
+            "Status: Agendado\n"
+            "Localidade: Rua Doutor Carvalho, 593 - Centro, Passos - MG - BR\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "TOKIO")
+        self.assertEqual(r["ASSISTENCIA"], "OS8281532")
+        self.assertEqual(r["CATEGORIA"], "RESIDENCIAL")
+        self.assertEqual(r["ORIGEM"], "Passos")
+        self.assertEqual(r["DESTINO"], "")
+        self.assertEqual(r["OBS"], "")
+
+    def test_tokio_com_destino_e_km(self):
+        texto = (
+            "Ordem de Serviço | Detalhe\n"
+            "Ordem de Serviço: OS7718140\n"
+            "Tipo de Serviço: REBOQUE UTILITÁRIO\n"
+            "Serviços\n"
+            "REBOQUE UTILITÁRIO KM 110 R$ 3,29\n"
+            "Origem: mg 050, km 264 - null, Piumhi - MG - BR\n"
+            "Destino: AUTO SOCORRO JM - Avenida Amazonas, 364 - Jardim Bela Vista, Passos - MG - BR\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "TOKIO")
+        self.assertEqual(r["ASSISTENCIA"], "OS7718140")
+        self.assertEqual(r["CATEGORIA"], "UTILITARIO")
+        self.assertEqual(r["ORIGEM"], "Piumhi")
+        self.assertEqual(r["DESTINO"], "Passos")
+        self.assertEqual(r["KM TOTAL"], "110")
+
+    def test_movida_portal_24h(self):
+        texto = (
+            "MOVIDA ASSISTENCIA 24H\n"
+            "Origem atendimento\n"
+            "RUA FABIANO S SILVA 55-3 VILA MUSCHIONI, SAO SEBASTIAO DO PARAISO - MG\n"
+            "Destino Atendimento\n"
+            "TV RUI BARBOSA 261 CANJERANUS, PASSOS - MG\n"
+            "Referência: BASE DO PRESTADOR.\n"
+            "Distância Total: 107.00 KM\n"
+            "Protocolo:2026059419 Servico:REBOQUE LEVE / TROCA DE PNEU Solicitante:AMANDA\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "MOVIDA")
+        self.assertEqual(r["ASSISTENCIA"], "2026059419")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "SAO SEBASTIAO DO PARAISO")
+        self.assertEqual(r["DESTINO"], "PASSOS")
+        self.assertEqual(r["KM TOTAL"], "107")
+
+    def test_movida_webprestador(self):
+        texto = (
+            "Dados do atendimento\n"
+            "tag\n"
+            "2026068380\n"
+            "domain\n"
+            "Movida Participacoes S.a.\n"
+            "Informações do serviço\n"
+            "WebPrestador: Reboque Leve\n"
+            "Assistência: Reboque Leve\n"
+            "route\n"
+            "70.00 Km\n"
+            "attach_money\n"
+            "R$ 212,00\n"
+            "Origem\n"
+            "location_on Mg-344, 0-0 - Pratapolis, Pratapolis - Minas Gerais - Agrobom\n"
+            "Destino\n"
+            "location_on Tv Rui Barbosa, 261 - Canjeranus, Passos - Minas Gerais - Base do Prestador.\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "MOVIDA")
+        self.assertEqual(r["ASSISTENCIA"], "2026068380")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "Pratapolis")
+        self.assertEqual(r["DESTINO"], "Passos")
+        self.assertEqual(r["KM TOTAL"], "70")
+        self.assertEqual(r["VALOR"], "212")
+
     def test_unknown(self):
         texto = "Bom dia, pessoal!\nConversa interna sem dados de assistência."
         r = extract_record(texto)

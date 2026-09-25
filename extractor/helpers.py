@@ -114,8 +114,24 @@ def labeled_values(text, label, value_regex=r"[^\n\r]+"):
 # Cidades
 # ---------------------------------------------------------------------------
 
+_UF_PATTERN = (
+    r"AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO|"
+    r"Acre|Alagoas|Amapa|Amapá|Amazonas|Bahia|Ceara|Ceará|Distrito Federal|Espirito Santo|Espírito Santo|"
+    r"Goias|Goiás|Maranhao|Maranhão|Mato Grosso do Sul|Mato Grosso|Minas Gerais|Para|Pará|"
+    r"Paraiba|Paraíba|Parana|Paraná|Pernambuco|Piaui|Piauí|Rio de Janeiro|Rio Grande do Norte|"
+    r"Rio Grande do Sul|Rondonia|Rondônia|Roraima|Santa Catarina|Sao Paulo|São Paulo|Sergipe|Tocantins"
+)
+
 _NON_CITY_PATTERN = re.compile(
-    r"\b(rua|av|avenida|rod|rodovia|estrada|travessa|alameda|praca|cep|numero|s/n|bairro|centro|complemento|referencia|referencias|latitude|longitude|senha|tarifa|quantidade|subtotal|importante|problema|solicitante|cliente|veiculo|placa|ano|cor|combustivel|nao cadastrada|n inf|local seguro|facil acesso|toda a cidade|proibida|alteracao|alterada|comunicar|operacao|facil assist|prestador|acionamento)\b",
+    r"\b(rua|av|avenida|rod|rodovia|estrada|travessa|alameda|praca|praça|cep|numero|número|s/n|"
+    r"bairro|centro|complemento|referencia|referência|referencias|referências|latitude|longitude|"
+    r"senha|tarifa|quantidade|subtotal|importante|problema|solicitante|cliente|veiculo|veículo|placa|ano|cor|combustivel|combustível|"
+    r"nao cadastrada|não cadastrada|n inf|local seguro|facil acesso|fácil acesso|toda a cidade|proibida|alteracao|alteração|alterada|"
+    r"comunicar|operacao|operação|facil assist|fácil assist|prestador|acionamento|"
+    r"origem|destino|atendimento|partida|retorno|localidade|ocorrencia|ocorrência|waze|google|maps|"
+    r"endereco|endereço|visao|visão|geral|dados|servico|serviço|anexos|observacoes|observações|"
+    r"historico|histórico|situacao|situação|previa|prévia|chegada|motivo|checklist|informacoes|informações|"
+    r"vazamento|oleo|óleo|agua|água|pane|oficina|concessionaria|concessionária)\b",
     re.IGNORECASE,
 )
 
@@ -127,8 +143,10 @@ def is_valid_city(val):
     val_clean = val.strip()
     if val_clean.upper() == "BASE DO PRESTADOR":
         return True
-    # Uma cidade não contém pontuação de formulário (: ; / \t | = () [] {})
-    if re.search(r"[:;/\t|=()\[\]{}]", val_clean):
+    # Uma cidade não contém pontuação de formulário (: ; , / \t | = () [] {} " ? ! * ~)
+    if re.search(r"[:;,/\t|=()\[\]{}\"?*!~\\_]", val_clean):
+        return False
+    if " - " in val_clean:
         return False
     if re.search(r"\d", val_clean):
         return False
@@ -199,16 +217,29 @@ def city_from_line(line):
     if not line:
         return None
 
-    # Padrão: "Localidade: RUA SANTA CRUZ, 205 - SAO FRANCISCO, PASSOS - MG - BR"
-    m_city_uf = re.search(r"[,]\s*([A-Za-zÀ-ú ]{2,35})\s*-\s*[A-Z]{2}\b", line.strip())
+    line_clean = re.sub(
+        r"^(?:location_on|origem|destino|localidade)\s*[:=-]?\s*",
+        "",
+        line.strip(),
+        flags=re.IGNORECASE,
+    )
+
+    # Padrão 1: "..., Cidade - MG - BR" ou "..., Cidade - Minas Gerais -" ou "... - Bairro, Cidade - SP"
+    m_city_uf = re.search(
+        r",\s*([A-Za-zÀ-ú' ]{2,35})\s*-\s*(?:" + _UF_PATTERN + r")\b",
+        line_clean,
+        re.IGNORECASE,
+    )
     if m_city_uf:
         cand = clean_city(m_city_uf.group(1))
         if cand:
             return cand
 
-    # Padrão: "Nome da Cidade - UF" ou "Nome da Cidade/UF" no fim da linha.
+    # Padrão 2: "Nome da Cidade - UF" ou "Nome da Cidade/UF" no fim da linha ou antes de - BR.
     match = re.search(
-        r"([A-Za-zÀ-ú][A-Za-zÀ-ú' ]{1,45})\s*[-/]\s*([A-Z]{2})\s*$", line.strip()
+        r"([A-Za-zÀ-ú][A-Za-zÀ-ú' ]{1,45})\s*[-/]\s*(?:" + _UF_PATTERN + r")(?:\s*-\s*BR)?\s*$",
+        line_clean,
+        re.IGNORECASE,
     )
     if match:
         cand = clean_city(match.group(1))
@@ -216,8 +247,8 @@ def city_from_line(line):
             return cand
 
     # Fallback: linha com apenas um nome de cidade (ex.: "Origem: São Paulo").
-    if _is_plain_city(line.strip()):
-        return clean_city(line.strip())
+    if _is_plain_city(line_clean):
+        return clean_city(line_clean)
     return None
 
 
@@ -270,39 +301,40 @@ def city_in_block(text, block_label):
             section = parts[1] if len(parts) > 1 else ""
 
         if section:
-            if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", section, re.IGNORECASE):
-                return "BASE DO PRESTADOR"
             tabular_city = extract_city_from_tabular_block(section)
             if tabular_city:
                 return tabular_city
             city_vals = labeled_values(section, "Cidade")
             if city_vals:
                 cand = clean_city(city_vals[0])
-                if cand:
+                if cand and cand != "BASE DO PRESTADOR":
                     return cand
             for line in section.splitlines()[:20]:
                 cand = city_from_line(line)
-                if cand:
+                if cand and cand != "BASE DO PRESTADOR":
                     return cand
+            if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", section, re.IGNORECASE):
+                return "BASE DO PRESTADOR"
 
     block = _block_after(text, block_label)
     if not block:
         return None
-
-    if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", block, re.IGNORECASE):
-        return "BASE DO PRESTADOR"
 
     tabular_city = extract_city_from_tabular_block(block)
     if tabular_city:
         return tabular_city
 
     city = extract_city_field(block, 1)
-    if city:
+    if city and city != "BASE DO PRESTADOR":
         return city
     for line in block.splitlines():
         city = city_from_line(line)
-        if city:
+        if city and city != "BASE DO PRESTADOR":
             return city
+
+    if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", block, re.IGNORECASE):
+        return "BASE DO PRESTADOR"
+
     return None
 
 
@@ -339,7 +371,13 @@ def _parse_number(value):
         # Formato brasileiro: ponto = milhar, vírgula = decimal.
         value = value.replace(".", "").replace(",", ".")
     else:
-        value = value.replace(".", "")
+        # Se tem ponto, verificar se é decimal (ex: 107.00 ou 5.2) ou milhar (ex: 1.000)
+        if re.search(r"^\d+\.\d{1,2}$", value):
+            pass  # Float decimal válido
+        elif re.search(r"^\d+\.\d{3}$", value):
+            value = value.replace(".", "")
+        else:
+            value = value.replace(".", "")
     try:
         number = float(value)
     except ValueError:

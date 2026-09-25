@@ -63,23 +63,34 @@ def set_categoria(record, text, label="Servico"):
             record["CATEGORIA"] = cat
             return
 
-    # 2. Padrão com múltiplas linhas após Serviço: (ex.: Serviço:\nREBOQUE\nEXTRA PESADO)
-    lbl_first = label[0] if isinstance(label, list) else label
-    pattern = re.compile(
-        r"(?:^|[\n\r\t,;-])[ \t]*" + accent_insensitive(lbl_first) + r"\s*[:=]?\s*(.*)",
-        re.IGNORECASE,
-    )
-    m_val = pattern.search(text or "")
-    if m_val:
-        lines = (text or "")[m_val.start():].splitlines()[:4]
-        combined = " ".join(l.strip() for l in lines if l.strip())
-        cat, obs = normalize_category(combined)
-        if cat:
-            record["CATEGORIA"] = cat
-            return
+    # 2. Testa cada rótulo candidato (ex.: Tipo de Serviço, Tipo de Evento)
+    labels = label if isinstance(label, list) else [label]
+    for lbl in labels:
+        # Padrão com múltiplas linhas após lbl: (ex.: Serviço:\nREBOQUE\nEXTRA PESADO)
+        pattern = re.compile(
+            r"(?:^|[\n\r\t,;-])[ \t]*" + accent_insensitive(lbl) + r"\s*[:=]?\s*(.*)",
+            re.IGNORECASE,
+        )
+        m_val = pattern.search(text or "")
+        if m_val:
+            lines = (text or "")[m_val.start():].splitlines()[:4]
+            combined = " ".join(l.strip() for l in lines if l.strip())
+            cat, _ = normalize_category(combined)
+            if cat:
+                record["CATEGORIA"] = cat
+                return
 
-    # 3. Padrão labeled_value padrão
-    categoria, obs = normalize_category(labeled_value(text, label))
+        # Padrão labeled_value padrão
+        val = labeled_value(text, lbl)
+        if val:
+            cat, _ = normalize_category(val)
+            if cat:
+                record["CATEGORIA"] = cat
+                return
+
+    # Se nenhum rótulo forneceu categoria reconhecida, registra a observação do primeiro
+    val_first = labeled_value(text, labels[0])
+    categoria, obs = normalize_category(val_first)
     if categoria:
         record["CATEGORIA"] = categoria
     elif obs:

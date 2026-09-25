@@ -40,13 +40,23 @@ def normalize_category(raw):
         return "LEVE", ""
     if "LEVE" in value:
         return "LEVE", ""
+    if "MOTO" in value or "MOTOCICLETA" in value:
+        return "LEVE", ""
     if "TAXI" in value or "TRANSPORTE" in value:
         return "TAXI", ""
     if "CHAVEIRO" in value:
         return "CHAVEIRO", ""
     if "PNEU" in value:
         return "TROCA PNEU", ""
-    if "PANE" in value or "SOCORRO" in value or "MECANIC" in value or "ELETRIC" in value:
+    if "BATERIA" in value or "RECARGA" in value:
+        return "CARGA DE BATERIA", ""
+    if "ELETRIC" in value:
+        if "REPARO" in value or "DOMICIL" in value or "RESIDENC" in value:
+            return "ELETRICISTA", ""
+        return "SOCORRO MECANICO", ""
+    if "DOMICIL" in value or "RESIDENC" in value or "FIXACO" in value or "CASA" in value:
+        return "RESIDENCIAL", ""
+    if "PANE" in value or "SOCORRO" in value or "MECANIC" in value:
         return "SOCORRO MECANICO", ""
     if "REBOQUE" in value or "GUINCHO" in value:
         return "", "ANALISE MANUAL - porte do reboque nao identificado"
