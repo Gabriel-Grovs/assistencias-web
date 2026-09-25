@@ -50,11 +50,13 @@ def normalize_category(raw):
         return "TROCA PNEU", ""
     if "BATERIA" in value or "RECARGA" in value:
         return "CARGA DE BATERIA", ""
-    if "ELETRIC" in value:
-        if "REPARO" in value or "DOMICIL" in value or "RESIDENC" in value:
+    if "ELETRIC" in value or "LAMPADA" in value or "TOMADA" in value or "INTERRUPTOR" in value or "DISJUNTOR" in value:
+        if "REPARO" in value or "DOMICIL" in value or "RESIDENC" in value or "LAMPADA" in value or "TOMADA" in value:
             return "ELETRICISTA", ""
         return "SOCORRO MECANICO", ""
-    if "DOMICIL" in value or "RESIDENC" in value or "FIXACO" in value or "CASA" in value:
+    if "ENCANADOR" in value or "HIDRAULIC" in value or "DESENTUP" in value or "VAZAMENTO" in value:
+        return "RESIDENCIAL", ""
+    if "DOMICIL" in value or "RESIDENC" in value or "FIXACO" in value or "CASA" in value or "VIDRACEIRO" in value:
         return "RESIDENCIAL", ""
     if "PANE" in value or "SOCORRO" in value or "MECANIC" in value:
         return "SOCORRO MECANICO", ""

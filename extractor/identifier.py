@@ -22,12 +22,17 @@ def identify(text):
     # Remove marcação de negrito/itálico do WhatsApp (*, _)
     clean_text = re.sub(r"[*_~]", "", normalized)
 
-    # TOKIO: "Ordem de Serviço" + token iniciado por "OS".
-    if re.search(r"ORDEM DE SERVIC", clean_text) and re.search(r"\bOS\d", clean_text):
+    # TOKIO: marca explícita ou padrão de Ordem de Serviço com OS
+    if re.search(r"\bTOKIO\b", clean_text) or re.search(r"\bTOKIO MARINE\b", clean_text):
+        return "tokio"
+    if re.search(r"ORDEM DE SERVIC", clean_text) and re.search(r"\bOS[\s-]*\d", clean_text):
+        return "tokio"
+    if re.search(r"NUMERO DA ASSIST", clean_text) and re.search(r"\bOS[\s-]*\d", clean_text):
         return "tokio"
 
     # Ordem de prioridade (briefing, seção 6 + histórico real).
     rules = [
+        ("tokio", ["TOKIO MARINE", "TOKIO"]),
         ("allianz", ["ALLIANZ"]),
         ("azul", ["AZUL SEGUROS"]),
         ("bradesco", ["BRADESCO AUTORE", "BRADESCO SEGUROS", "BRADESCO"]),
