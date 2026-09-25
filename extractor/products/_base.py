@@ -12,6 +12,9 @@ from ..helpers import (
     accent_insensitive,
     city_from_line,
     city_in_block,
+    city_from_block,
+    clean_city,
+    is_valid_city,
     extract_city_field,
     extract_number,
     labeled_value,
@@ -60,7 +63,22 @@ def set_categoria(record, text, label="Servico"):
             record["CATEGORIA"] = cat
             return
 
-    # 2. Padrão labeled_value
+    # 2. Padrão com múltiplas linhas após Serviço: (ex.: Serviço:\nREBOQUE\nEXTRA PESADO)
+    lbl_first = label[0] if isinstance(label, list) else label
+    pattern = re.compile(
+        r"(?:^|[\n\r\t,;-])[ \t]*" + accent_insensitive(lbl_first) + r"\s*[:=]?\s*(.*)",
+        re.IGNORECASE,
+    )
+    m_val = pattern.search(text or "")
+    if m_val:
+        lines = (text or "")[m_val.start():].splitlines()[:4]
+        combined = " ".join(l.strip() for l in lines if l.strip())
+        cat, obs = normalize_category(combined)
+        if cat:
+            record["CATEGORIA"] = cat
+            return
+
+    # 3. Padrão labeled_value padrão
     categoria, obs = normalize_category(labeled_value(text, label))
     if categoria:
         record["CATEGORIA"] = categoria
@@ -84,9 +102,32 @@ def set_portal_cities(record, text):
 
 
 def set_block_cities(record, text):
-    """Origem/Destino a partir de blocos rotulados ``Origem`` e ``Destino``."""
-    record["ORIGEM"] = city_in_block(text, "Origem") or ""
-    record["DESTINO"] = city_in_block(text, "Destino") or ""
+    """Origem/Destino a partir de blocos rotulados ``Origem`` e ``Destino`` com fallbacks."""
+    origem = city_in_block(text, "Origem")
+    destino = city_in_block(text, "Destino")
+
+    if not origem:
+        origem = city_from_block(text, "Endereco Ocorrencia")
+    if not origem:
+        origem = city_from_block(text, "Localidade")
+    if not origem:
+        origem = city_from_block(text, "Local da Ocorrencia")
+    if not origem:
+        origem = city_from_block(text, "Local")
+    if not origem:
+        origem = extract_city_field(text, 1)
+
+    if not destino:
+        destino = city_from_block(text, "Endereco Destino")
+    if not destino:
+        destino = city_from_block(text, "Local de Destino")
+    if not destino:
+        c2 = extract_city_field(text, 2)
+        if c2 and c2 != origem:
+            destino = c2
+
+    record["ORIGEM"] = clean_city(origem) or ""
+    record["DESTINO"] = clean_city(destino) or ""
 
 
 def set_locais_cities(record, text):

@@ -69,7 +69,7 @@ def labeled_value(text, labels, value_regex=r"[^\n\r]+"):
         labels = [labels]
     for label in labels:
         pattern = re.compile(
-            accent_insensitive(label) + r"\s*[:=]\s*(" + value_regex + r")",
+            r"(?:^|[\n\r\t,;-])[ \t]*" + accent_insensitive(label) + r"\s*[:=]?\s*([^\r\n]*)",
             re.IGNORECASE,
         )
         match = pattern.search(text)
@@ -79,7 +79,7 @@ def labeled_value(text, labels, value_regex=r"[^\n\r]+"):
         if value:
             return value
         # Valor vazio: tenta a próxima linha não vazia.
-        rest = text[match.end():].lstrip("\r\n")
+        rest = text[match.end():].lstrip("\r\n\t ")
         if rest:
             first_line = rest.splitlines()[0].strip()
             if first_line:
@@ -92,15 +92,51 @@ def labeled_values(text, label, value_regex=r"[^\n\r]+"):
     if text is None:
         return []
     pattern = re.compile(
-        accent_insensitive(label) + r"\s*[:=]\s*(" + value_regex + r")",
+        r"(?:^|[\n\r\t,;-])[ \t]*" + accent_insensitive(label) + r"\s*[:=]?\s*([^\r\n]*)",
         re.IGNORECASE,
     )
-    return [m.group(1).strip() for m in pattern.finditer(text)]
+    results = []
+    for m in pattern.finditer(text):
+        val = m.group(1).strip()
+        if not val:
+            # Pega da próxima linha não vazia
+            rest = text[m.end():].lstrip("\r\n\t ")
+            if rest:
+                candidate = rest.splitlines()[0].strip()
+                if not any(k in candidate.lower() for k in ["bairro", "estado", "cep", "regiao", "complemento", "referencia", "referencias"]):
+                    val = candidate
+        if val:
+            results.append(val)
+    return results
 
 
 # ---------------------------------------------------------------------------
 # Cidades
 # ---------------------------------------------------------------------------
+
+_NON_CITY_PATTERN = re.compile(
+    r"\b(rua|av|avenida|rod|rodovia|estrada|travessa|alameda|praca|cep|numero|s/n|bairro|centro|complemento|referencia|referencias|latitude|longitude|senha|tarifa|quantidade|subtotal|importante|problema|solicitante|cliente|veiculo|placa|ano|cor|combustivel|nao cadastrada|n inf|local seguro|facil acesso|toda a cidade|proibida|alteracao|alterada|comunicar|operacao|facil assist|prestador|acionamento)\b",
+    re.IGNORECASE,
+)
+
+
+def is_valid_city(val):
+    """Valida se uma string é um nome legítimo de cidade."""
+    if not val:
+        return False
+    val_clean = val.strip()
+    if val_clean.upper() == "BASE DO PRESTADOR":
+        return True
+    # Uma cidade não contém pontuação de formulário (: ; / \t | = () [] {})
+    if re.search(r"[:;/\t|=()\[\]{}]", val_clean):
+        return False
+    if re.search(r"\d", val_clean):
+        return False
+    val_ascii = strip_accents(val_clean).lower()
+    if _NON_CITY_PATTERN.search(val_ascii):
+        return False
+    return 2 <= len(val_clean) <= 45
+
 
 def clean_city(value):
     """Limpa um valor de cidade: remove UF e pontuação pendente.
@@ -110,20 +146,24 @@ def clean_city(value):
     if not value:
         return ""
     value = value.strip()
-    value = re.sub(r"\s*[-/,]\s*[A-Z]{2}\s*$", "", value)
+    if value.upper() == "BASE DO PRESTADOR":
+        return "BASE DO PRESTADOR"
+    value = re.sub(r"\s*[-/,]\s*[A-Za-z]{2}\s*$", "", value)
     value = re.sub(r"\s*-\s*$", "", value)
     value = value.strip(" -,\t\r\n")
+    if not is_valid_city(value):
+        return ""
     return value
 
 
 def extract_city_field(text, occurrence=1):
-    """Retorna a n-ésima ocorrência do campo ``Cidade:`` no texto."""
+    """Retorna a n-ésima ocorrência válida do campo ``Cidade:`` no texto."""
     if text is None:
         return None
     values = labeled_values(text, "Cidade")
-    if len(values) >= occurrence:
-        city = clean_city(values[occurrence - 1])
-        return city or None
+    valid_cities = [clean_city(v) for v in values if clean_city(v)]
+    if len(valid_cities) >= occurrence:
+        return valid_cities[occurrence - 1]
     return None
 
 
@@ -147,39 +187,34 @@ def assistencia_laudo(text):
     return None
 
 
-_ADDRESS_KEYWORDS = (
-    "rua", "av ", "avenida", "rod", "rodovia", "estrada", "travessa",
-    "alameda", "praca", "cep", "numero", "base do prestador",
-    "s/n", "bairro", "complemento", "referencia", "latitude", "longitude",
-)
-
-
 def _is_plain_city(value):
     """Indica se uma linha parece conter apenas um nome de cidade."""
     if not value:
         return False
-    if re.search(r"\d", value):
-        return False
-    if not re.fullmatch(r"[A-Za-zÀ-ú][A-Za-zÀ-ú .'-]{0,60}", value):
-        return False
-    low = strip_accents(value).lower()
-    return not any(kw in low for kw in _ADDRESS_KEYWORDS)
+    return is_valid_city(value)
 
 
 def city_from_line(line):
     """Extrai a cidade de uma linha de endereço, se identificável."""
     if not line:
         return None
-    city = extract_city_field(line, 1)
-    if city:
-        return city
-    # Padrão "Nome da Cidade - UF" ou "Nome da Cidade/UF" no fim da linha.
-    # O hífen não faz parte do nome da cidade, evitando capturar o endereço.
+
+    # Padrão: "Localidade: RUA SANTA CRUZ, 205 - SAO FRANCISCO, PASSOS - MG - BR"
+    m_city_uf = re.search(r"[,]\s*([A-Za-zÀ-ú ]{2,35})\s*-\s*[A-Z]{2}\b", line.strip())
+    if m_city_uf:
+        cand = clean_city(m_city_uf.group(1))
+        if cand:
+            return cand
+
+    # Padrão: "Nome da Cidade - UF" ou "Nome da Cidade/UF" no fim da linha.
     match = re.search(
         r"([A-Za-zÀ-ú][A-Za-zÀ-ú' ]{1,45})\s*[-/]\s*([A-Z]{2})\s*$", line.strip()
     )
     if match:
-        return clean_city(match.group(1))
+        cand = clean_city(match.group(1))
+        if cand:
+            return cand
+
     # Fallback: linha com apenas um nome de cidade (ex.: "Origem: São Paulo").
     if _is_plain_city(line.strip()):
         return clean_city(line.strip())
@@ -223,9 +258,39 @@ def _block_after(text, block_label):
 
 def city_in_block(text, block_label):
     """Extrai a cidade de dentro de um bloco rotulado (``Origem``/``Destino``)."""
+    lbl_lower = block_label.lower().strip()
+
+    # 1. Particiona pelas seções ORIGEM / DESTINO quando presentes
+    if lbl_lower in ("origem", "destino"):
+        parts = re.split(r"^[ \t]*DESTINO\b", text or "", flags=re.IGNORECASE | re.MULTILINE)
+        if lbl_lower == "origem":
+            m_orig = re.search(r"^[ \t]*ORIGEM\b.*$", parts[0], flags=re.IGNORECASE | re.MULTILINE)
+            section = parts[0][m_orig.end():] if m_orig else ""
+        else:
+            section = parts[1] if len(parts) > 1 else ""
+
+        if section:
+            if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", section, re.IGNORECASE):
+                return "BASE DO PRESTADOR"
+            tabular_city = extract_city_from_tabular_block(section)
+            if tabular_city:
+                return tabular_city
+            city_vals = labeled_values(section, "Cidade")
+            if city_vals:
+                cand = clean_city(city_vals[0])
+                if cand:
+                    return cand
+            for line in section.splitlines()[:20]:
+                cand = city_from_line(line)
+                if cand:
+                    return cand
+
     block = _block_after(text, block_label)
     if not block:
         return None
+
+    if re.search(r"\bBASE\s+DO\s+PRESTADOR\b", block, re.IGNORECASE):
+        return "BASE DO PRESTADOR"
 
     tabular_city = extract_city_from_tabular_block(block)
     if tabular_city:

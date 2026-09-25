@@ -15,7 +15,20 @@ def extract(text):
     record = make_record("TOKIO")
     record["ASSISTENCIA"] = _assistencia(text)
     set_categoria(record, text, ["Tipo de Evento", "Tipo de Servico"])
-    record["ORIGEM"] = city_in_block(text, "Origem") or ""
+    
+    origem = city_in_block(text, "Origem")
+    if not origem:
+        for line in (text or "").splitlines():
+            if re.search(r"Localidade\s*:", line, re.IGNORECASE):
+                from ..helpers import city_from_line
+                origem = city_from_line(line)
+                if origem:
+                    break
+    if not origem:
+        origem = city_in_block(text, "Local")
+
+    from ..helpers import clean_city
+    record["ORIGEM"] = clean_city(origem) or ""
     record["DESTINO"] = ""
     set_km_model_a(record, text)
     record["VALOR"] = ""
