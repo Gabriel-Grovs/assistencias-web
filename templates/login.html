@@ -3,21 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Sistema de Assistências</title>
+    <title>Login — Painel de Assistências</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="login-page">
-    <main class="login-card">
-        <h1>Sistema de Assistências</h1>
-        <p class="subtitle">Entre com a senha para continuar</p>
-        <form method="POST" action="{{ url_for('login') }}">
-            <label for="password">Senha</label>
-            <input type="password" id="password" name="password" autofocus required>
-            {% if error %}
-            <p class="error">{{ error }}</p>
-            {% endif %}
-            <button type="submit">Entrar</button>
-        </form>
-    </main>
+    <div class="login-wrapper">
+        <div class="login-brand">
+            <div class="brand-badge">
+                <span class="brand-icon">🚛</span>
+                <span class="brand-name">JM Assistências</span>
+            </div>
+            <h2>Central Operacional</h2>
+            <p class="subtitle">Automação e Leitura Inteligente de Seguradoras</p>
+        </div>
+
+        <main class="login-card">
+            <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <div class="form-group">
+                    <label for="password">Senha de Acesso</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Digite sua senha de equipe..." autofocus required>
+                    </div>
+                </div>
+
+                {% if error %}
+                <div class="alert-error">
+                    <span class="alert-icon">⚠️</span>
+                    <span>{{ error }}</span>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn-primary btn-block">
+                    <span>Acessar Painel</span>
+                    <span class="arrow">→</span>
+                </button>
+            </form>
+        </main>
+        
+        <footer class="login-footer">
+            <p>Conectado ao Google Sheets & Cloud Engine</p>
+        </footer>
+    </div>
 </body>
 </html>

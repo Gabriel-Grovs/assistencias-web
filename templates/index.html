@@ -3,72 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Assistências</title>
+    <title>Painel de Assistências — Auto Socorro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <header class="topbar">
-        <h1>Sistema de Assistências</h1>
-        <a class="logout" href="{{ url_for('logout') }}">Sair</a>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-avatar">🚛</div>
+                <div>
+                    <h1 class="brand-title">JM Assistências <span class="badge-version">v2.0</span></h1>
+                    <span class="brand-subtitle">Leitor Universal & Despacho Operacional</span>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <div class="system-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Google Sheets Ativo</span>
+                </div>
+                <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit" target="_blank" rel="noopener" class="btn-sheet" title="Abrir Planilha Google">
+                    <span>📊 Ver Planilha</span>
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn-logout" title="Encerrar Sessão">
+                    <span>Sair</span>
+                </a>
+            </div>
+        </div>
     </header>
 
-    <main class="container">
-        <section class="input-panel">
-            <label for="texto">Cole o texto da assistência abaixo:</label>
-            <textarea id="texto" placeholder="Cole aqui o conteúdo copiado do portal da seguradora..."></textarea>
-            <button id="processar" type="button">Processar</button>
-        </section>
+    <main class="main-content">
+        <div class="content-wrapper">
+            <!-- PAINEL DE ENTRADA -->
+            <section class="card input-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Captura de Assistência</h2>
+                        <p class="description">Cole o texto copiado de qualquer portal (Tokio, Yelum, Porto, Allianz, HDI, Aciona Fácil, etc.)</p>
+                    </div>
+                    <button type="button" id="btn-limpar" class="btn-ghost" title="Limpar campo">Limpar</button>
+                </div>
 
-        <section id="resultado" class="result-panel" hidden>
-            <h2>Resultado</h2>
-            <p id="produto" class="produto"></p>
-            <table class="resultado-table">
-                <tbody id="campos"></tbody>
-            </table>
-            <p id="gravacao" class="gravacao"></p>
-            <p id="obs" class="obs"></p>
-        </section>
+                <div class="card-body">
+                    <div class="textarea-wrapper">
+                        <textarea id="texto" placeholder="Cole aqui o conteúdo copiado da tela da seguradora ou mensagem do grupo..."></textarea>
+                    </div>
+
+                    <div class="input-footer">
+                        <div class="supported-tags">
+                            <span class="tag">TOKIO</span>
+                            <span class="tag">YELUM</span>
+                            <span class="tag">PORTO</span>
+                            <span class="tag">ALLIANZ</span>
+                            <span class="tag">HDI</span>
+                            <span class="tag">BRADESCO</span>
+                            <span class="tag">SUHAI</span>
+                            <span class="tag">+12 Portais</span>
+                        </div>
+                        <button id="processar" type="button" class="btn-primary btn-large">
+                            <span class="btn-icon">⚡</span>
+                            <span class="btn-text">Processar Assistência</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FEEDBACK DE GRAVAÇÃO / STATUS -->
+            <div id="status-banner" class="status-banner" hidden>
+                <div class="status-content">
+                    <span id="status-icon" class="status-icon">✅</span>
+                    <div>
+                        <strong id="status-title">Processado</strong>
+                        <p id="status-desc" class="status-desc"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTADO ESTRUTURADO -->
+            <section id="resultado" class="card result-card" hidden>
+                <div class="card-header border-bottom">
+                    <div class="result-header-left">
+                        <span class="section-label">RESULTADO DA INTERPRETAÇÃO</span>
+                        <div class="produto-container">
+                            <span id="badge-produto" class="badge-produto">YELUM</span>
+                            <span id="badge-assistencia" class="badge-assistencia">Nº 9651512/2</span>
+                            <span id="badge-categoria" class="badge-categoria">LEVE</span>
+                        </div>
+                    </div>
+                    <button id="btn-copiar-whatsapp" type="button" class="btn-whatsapp" title="Copiar resumo formatado para enviar no WhatsApp">
+                        <span>📲 Copiar para Motorista</span>
+                    </button>
+                </div>
+
+                <!-- CARDS DE DESTAQUE: ORIGEM E DESTINO -->
+                <div class="dispatch-grid">
+                    <div class="dispatch-card origem-card">
+                        <div class="dispatch-card-header">
+                            <span class="dispatch-icon">📍</span>
+                            <span class="dispatch-title">ORIGEM DO ATENDIMENTO</span>
+                        </div>
+                        <div class="dispatch-city" id="card-origem">Passos</div>
+                        <div class="dispatch-sub">Local do veículo para socorro</div>
+                    </div>
+
+                    <div class="dispatch-arrow">
+                        <span class="arrow-symbol">➔</span>
+                        <div class="km-pill" id="card-km">156 KM</div>
+                    </div>
+
+                    <div class="dispatch-card destino-card">
+                        <div class="dispatch-card-header">
+                            <span class="dispatch-icon">🏁</span>
+                            <span class="dispatch-title">DESTINO DO SERVIÇO</span>
+                        </div>
+                        <div class="dispatch-city" id="card-destino">Capitólio</div>
+                        <div class="dispatch-sub">Local de entrega / concessionária</div>
+                    </div>
+                </div>
+
+                <!-- TABELA COMPLETA DE DADOS -->
+                <div class="details-section">
+                    <h3 class="details-title">Dados Estruturados Gravados</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Campo</th>
+                                    <th>Valor Extraído</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="campos-tabela"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ALERTAS / OBSERVAÇÕES -->
+                <div id="obs-card" class="obs-card" hidden>
+                    <div class="obs-header">
+                        <span class="obs-icon">⚠️</span>
+                        <strong>Alertas e Observações Operacionais:</strong>
+                    </div>
+                    <p id="obs-text" class="obs-text"></p>
+                </div>
+            </section>
+        </div>
     </main>
+
+    <div id="toast" class="toast" hidden>Mensagem copiada com sucesso!</div>
 
     <script>
         const FIELDS = [
-            ["DATA", "DATA"],
-            ["CLIENTE", "CLIENTE"],
-            ["ASSISTENCIA", "ASSISTENCIA"],
-            ["CATEGORIA", "CATEGORIA"],
-            ["ORIGEM", "ORIGEM"],
-            ["DESTINO", "DESTINO"],
-            ["KM TOTAL", "KM TOTAL"],
-            ["VALOR", "VALOR"],
-            ["OBS", "OBS"]
+            { key: "DATA", label: "Data do Envio" },
+            { key: "CLIENTE", label: "Seguradora / Produto" },
+            { key: "ASSISTENCIA", label: "Assistência / Barra" },
+            { key: "CATEGORIA", label: "Categoria do Reboque" },
+            { key: "ORIGEM", label: "Cidade de Origem" },
+            { key: "DESTINO", label: "Cidade de Destino" },
+            { key: "KM TOTAL", label: "Quilometragem Total" },
+            { key: "VALOR", label: "Valor Informado" },
+            { key: "MOTORISTA", label: "Motorista (Manual)" },
+            { key: "VEICULO", label: "Veículo (Manual)" },
+            { key: "OBS", label: "Observações / Alertas" }
         ];
 
-        const PRODUTO_LABELS = {
-            allianz: "ALLIANZ", azul: "AZUL", bradesco: "BRADESCO",
-            caoa_chery: "CAOA CHERY", fca_fiat: "FCA FIAT", hdi: "HDI",
-            movida: "MOVIDA", porto: "PORTO", resolve_assist: "RESOLVE ASSIST",
-            santander: "SANTANDER", suhai: "SUHAI", sura: "SURA",
-            tato_assist: "TATO ASSIST", tokio: "TOKIO", universo_agv: "UNIVERSO AGV",
-            velox: "VELOX", yelum: "YELUM", youse: "YOUSE", unknown: "DESCONHECIDO"
-        };
+        let ultimoRegistro = null;
+
+        document.getElementById("btn-limpar").addEventListener("click", () => {
+            document.getElementById("texto").value = "";
+            document.getElementById("texto").focus();
+        });
+
+        document.getElementById("btn-copiar-whatsapp").addEventListener("click", () => {
+            if (!ultimoRegistro) return;
+            const orig = ultimoRegistro.ORIGEM || "NÃO INFORMADA";
+            const dest = ultimoRegistro.DESTINO || "SEM DESTINO DEFINIDO";
+            const cli = ultimoRegistro.CLIENTE || "SEGURADORA";
+            const ass = ultimoRegistro.ASSISTENCIA || "-";
+            const cat = ultimoRegistro.CATEGORIA || "LEVE";
+            const km = ultimoRegistro["KM TOTAL"] ? `${ultimoRegistro["KM TOTAL"]} KM` : "A DEFINIR";
+
+            const textoMsg = 
+`🚨 *NOVA ASSISTÊNCIA DESPACHADA* 🚨
+
+🏢 *Seguradora:* ${cli}
+📋 *Assistência:* ${ass}
+🚛 *Categoria:* ${cat}
+📏 *KM Estimado:* ${km}
+
+📍 *ORIGEM:* ${orig}
+🏁 *DESTINO:* ${dest}
+
+Favor confirmar saída e início do percurso!`;
+
+            navigator.clipboard.writeText(textoMsg).then(() => {
+                showToast("✅ Resumo para o motorista copiado para a área de transferência!");
+            }).catch(() => {
+                showToast("Erro ao copiar para a área de transferência.");
+            });
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.textContent = msg;
+            toast.hidden = false;
+            toast.classList.add("show");
+            setTimeout(() => {
+                toast.classList.remove("show");
+                toast.hidden = true;
+            }, 3000);
+        }
 
         document.getElementById("processar").addEventListener("click", async function () {
+            const btn = document.getElementById("processar");
             const texto = document.getElementById("texto").value;
             const resultado = document.getElementById("resultado");
-            const produto = document.getElementById("produto");
-            const campos = document.getElementById("campos");
-            const gravacao = document.getElementById("gravacao");
-            const obs = document.getElementById("obs");
+            const statusBanner = document.getElementById("status-banner");
+            const statusIcon = document.getElementById("status-icon");
+            const statusTitle = document.getElementById("status-title");
+            const statusDesc = document.getElementById("status-desc");
 
             if (!texto.trim()) {
-                resultado.hidden = false;
-                produto.textContent = "Erro";
-                produto.classList.add("erro");
-                campos.innerHTML = "";
-                gravacao.textContent = "Texto vazio";
-                obs.textContent = "";
+                statusBanner.hidden = false;
+                statusBanner.className = "status-banner status-warning";
+                statusIcon.textContent = "⚠️";
+                statusTitle.textContent = "Campo Vazio";
+                statusDesc.textContent = "Por favor, cole o texto da assistência antes de processar.";
+                resultado.hidden = true;
                 return;
             }
+
+            // Loading state
+            btn.disabled = true;
+            btn.classList.add("loading");
+            btn.querySelector(".btn-text").textContent = "Analisando dados...";
 
             const form = new FormData();
             form.append("texto", texto);
@@ -78,63 +249,100 @@
                 const data = await response.json();
 
                 if (!data.ok) {
-                    resultado.hidden = false;
-                    produto.textContent = "Erro";
-                    produto.classList.add("erro");
-                    campos.innerHTML = "";
-                    gravacao.textContent = data.erro || "Erro ao processar";
-                    obs.textContent = "";
+                    statusBanner.hidden = false;
+                    statusBanner.className = "status-banner status-error";
+                    statusIcon.textContent = "❌";
+                    statusTitle.textContent = "Erro no Processamento";
+                    statusDesc.textContent = data.erro || "Falha ao interpretar o texto fornecido.";
+                    resultado.hidden = true;
                     return;
                 }
 
-                const registro = data.registro;
-                produto.textContent = "Produto identificado: " +
-                    (PRODUTO_LABELS[registro.PRODUTO] || registro.PRODUTO);
-                produto.classList.remove("erro");
+                const reg = data.registro;
+                ultimoRegistro = reg;
 
-                campos.innerHTML = "";
-                for (const [label, key] of FIELDS) {
-                    const value = registro[key] || "";
-                    const row = document.createElement("tr");
-                    const th = document.createElement("th");
-                    th.textContent = label;
-                    const td = document.createElement("td");
-                    td.textContent = value;
+                // Preenche badges
+                document.getElementById("badge-produto").textContent = reg.CLIENTE || reg.PRODUTO?.toUpperCase() || "GERAL";
+                document.getElementById("badge-assistencia").textContent = reg.ASSISTENCIA ? `Nº ${reg.ASSISTENCIA}` : "S/ Nº";
+                document.getElementById("badge-categoria").textContent = reg.CATEGORIA || "A DEFINIR";
 
-                    if (key === "ORIGEM" || key === "DESTINO") {
-                        td.classList.add("destaque");
+                // Preenche cards de destaque
+                document.getElementById("card-origem").textContent = reg.ORIGEM || "Não identificada";
+                document.getElementById("card-destino").textContent = reg.DESTINO || "Mesma localidade / s/ destino";
+                document.getElementById("card-km").textContent = reg["KM TOTAL"] ? `${reg["KM TOTAL"]} KM` : "KM s/ dados";
+
+                // Preenche tabela estruturada
+                const tbody = document.getElementById("campos-tabela");
+                tbody.innerHTML = "";
+                FIELDS.forEach(f => {
+                    const tr = document.createElement("tr");
+                    const tdLabel = document.createElement("td");
+                    tdLabel.className = "col-label";
+                    tdLabel.textContent = f.label;
+
+                    const tdVal = document.createElement("td");
+                    tdVal.className = "col-val";
+                    const val = reg[f.key] || "";
+                    tdVal.textContent = val || "—";
+
+                    if ((f.key === "ORIGEM" || f.key === "DESTINO") && val) {
+                        tdVal.classList.add("val-highlight");
                     }
-                    row.appendChild(th);
-                    row.appendChild(td);
-                    campos.appendChild(row);
+
+                    const tdStatus = document.createElement("td");
+                    tdStatus.className = "col-status";
+                    if (val) {
+                        tdStatus.innerHTML = `<span class="badge-ok">Extraído</span>`;
+                    } else if (f.key === "MOTORISTA" || f.key === "VEICULO") {
+                        tdStatus.innerHTML = `<span class="badge-manual">Manual</span>`;
+                    } else {
+                        tdStatus.innerHTML = `<span class="badge-empty">Vazio</span>`;
+                    }
+
+                    tr.appendChild(tdLabel);
+                    tr.appendChild(tdVal);
+                    tr.appendChild(tdStatus);
+                    tbody.appendChild(tr);
+                });
+
+                // Observações
+                const obsCard = document.getElementById("obs-card");
+                const obsText = document.getElementById("obs-text");
+                if (reg.OBS && reg.OBS.trim()) {
+                    obsText.textContent = reg.OBS;
+                    obsCard.hidden = false;
+                } else {
+                    obsCard.hidden = true;
                 }
 
+                // Status de Gravação no Sheets
                 const sheets = data.sheets || {};
+                statusBanner.hidden = false;
                 if (sheets.ok) {
-                    gravacao.textContent = "Gravado no Google Sheets — linha " + sheets.linha;
-                    gravacao.classList.remove("erro");
-                    gravacao.classList.add("sucesso");
+                    statusBanner.className = "status-banner status-success";
+                    statusIcon.textContent = "✅";
+                    statusTitle.textContent = "Gravado com Sucesso no Google Sheets!";
+                    statusDesc.textContent = `Registrado na linha ${sheets.linha} da planilha compartilhada.`;
                 } else {
-                    gravacao.textContent = "Aviso: " + (sheets.erro || "não gravado");
-                    gravacao.classList.remove("sucesso");
-                    gravacao.classList.add("erro");
-                }
-
-                const obsValue = registro["OBS"] || "";
-                if (obsValue) {
-                    obs.textContent = "Alertas: " + obsValue;
-                } else {
-                    obs.textContent = "";
+                    statusBanner.className = "status-banner status-warning";
+                    statusIcon.textContent = "⚠️";
+                    statusTitle.textContent = "Dados interpretados (Aviso na gravação)";
+                    statusDesc.textContent = sheets.erro || "Aviso ao conectar com a planilha.";
                 }
 
                 resultado.hidden = false;
+                resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+
             } catch (err) {
-                resultado.hidden = false;
-                produto.textContent = "Erro";
-                produto.classList.add("erro");
-                campos.innerHTML = "";
-                gravacao.textContent = "Falha na comunicação com o servidor";
-                obs.textContent = "";
+                statusBanner.hidden = false;
+                statusBanner.className = "status-banner status-error";
+                statusIcon.textContent = "❌";
+                statusTitle.textContent = "Erro de Conexão";
+                statusDesc.textContent = "Não foi possível se comunicar com o servidor da aplicação.";
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove("loading");
+                btn.querySelector(".btn-text").textContent = "Processar Assistência";
             }
         });
     </script>
