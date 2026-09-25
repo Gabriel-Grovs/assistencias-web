@@ -53,6 +53,12 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/planilha")
+def planilha():
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID") or "1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8"
+    return redirect(f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit?usp=sharing", code=302)
+
+
 @app.route("/")
 @login_required
 def index():

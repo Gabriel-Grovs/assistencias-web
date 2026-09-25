@@ -21,11 +21,11 @@
             </div>
 
             <div class="nav-actions">
-                <div class="system-status">
+                <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="system-status" title="Google Sheets Conectado — Clique para abrir a planilha">
                     <span class="status-dot"></span>
                     <span class="status-text">Google Sheets Ativo</span>
-                </div>
-                <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit" target="_blank" rel="noopener" class="btn-sheet" title="Abrir Planilha Google">
+                </a>
+                <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-sheet" title="Abrir Planilha Google">
                     <span>📊 Ver Planilha</span>
                 </a>
                 <a href="{{ url_for('logout') }}" class="btn-logout" title="Encerrar Sessão">
@@ -75,11 +75,14 @@
             <div id="status-banner" class="status-banner" hidden>
                 <div class="status-content">
                     <span id="status-icon" class="status-icon">✅</span>
-                    <div>
+                    <div class="status-text-block">
                         <strong id="status-title">Processado</strong>
                         <p id="status-desc" class="status-desc"></p>
                     </div>
                 </div>
+                <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit?usp=sharing" target="_blank" rel="noopener noreferrer" id="btn-banner-sheet" class="btn-banner-sheet" hidden title="Abrir Planilha Google compartilhada">
+                    <span>📊 Abrir Planilha ↗</span>
+                </a>
             </div>
 
             <!-- RESULTADO ESTRUTURADO -->
@@ -126,7 +129,12 @@
 
                 <!-- TABELA COMPLETA DE DADOS -->
                 <div class="details-section">
-                    <h3 class="details-title">Dados Estruturados Gravados</h3>
+                    <div class="details-header-row">
+                        <h3 class="details-title">Dados Estruturados Gravados</h3>
+                        <a href="https://docs.google.com/spreadsheets/d/1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn-table-sheet" title="Ver registros na Planilha Google">
+                            <span>Ver na Planilha ↗</span>
+                        </a>
+                    </div>
                     <div class="table-responsive">
                         <table class="data-table">
                             <thead>
@@ -317,17 +325,20 @@ Favor confirmar saída e início do percurso!`;
 
                 // Status de Gravação no Sheets
                 const sheets = data.sheets || {};
+                const bannerSheet = document.getElementById("btn-banner-sheet");
                 statusBanner.hidden = false;
                 if (sheets.ok) {
                     statusBanner.className = "status-banner status-success";
                     statusIcon.textContent = "✅";
                     statusTitle.textContent = "Gravado com Sucesso no Google Sheets!";
                     statusDesc.textContent = `Registrado na linha ${sheets.linha} da planilha compartilhada.`;
+                    if (bannerSheet) bannerSheet.hidden = false;
                 } else {
                     statusBanner.className = "status-banner status-warning";
                     statusIcon.textContent = "⚠️";
                     statusTitle.textContent = "Dados interpretados (Aviso na gravação)";
                     statusDesc.textContent = sheets.erro || "Aviso ao conectar com a planilha.";
+                    if (bannerSheet) bannerSheet.hidden = true;
                 }
 
                 resultado.hidden = false;
