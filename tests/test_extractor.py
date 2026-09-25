@@ -341,6 +341,32 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["KM TOTAL"], "156")
         self.assertEqual(r["OBS"], "")
 
+    def test_yelum_tabular_sem_bairro(self):
+        texto = (
+            "Assistência\t\tSolicitação\t\tProduto\t\tData solicitação\n"
+            "9570675\n"
+            "2\n"
+            "YELUM\n"
+            "04/05/2026 11:10\n"
+            "SERVIÇO #1\n"
+            "MTA - MEIO DE TRANSPORTE ALTERNATIVO - TAXI\n"
+            "ORIGEM\t\n"
+            "Endereço\t\tComplemento\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "Alpinópolis\n"
+            "MG\n"
+            "37795000\n"
+            "DESTINO\n"
+            "Endereço\t\tComplemento\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "Andradas\n"
+            "MG\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "YELUM")
+        self.assertEqual(r["ORIGEM"], "Alpinópolis")
+        self.assertEqual(r["DESTINO"], "Andradas")
+
     def test_youse(self):
         texto = (
             "YOUSE SEGUROS\n"

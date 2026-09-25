@@ -122,6 +122,21 @@ _UF_PATTERN = (
     r"Rio Grande do Sul|Rondonia|Rondônia|Roraima|Santa Catarina|Sao Paulo|São Paulo|Sergipe|Tocantins"
 )
 
+_UF_SET = {
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+    "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+}
+
+_STATE_ONLY_NAMES_SET = {
+    "ACRE", "ALAGOAS", "AMAPA", "AMAZONAS", "BAHIA", "CEARA", "DISTRITO FEDERAL",
+    "ESPIRITO SANTO", "GOIAS", "MARANHAO", "MATO GROSSO DO SUL", "MATO GROSSO",
+    "MINAS GERAIS", "PARA", "PARAIBA", "PARANA", "PERNAMBUCO", "PIAUI",
+    "RIO GRANDE DO NORTE", "RIO GRANDE DO SUL", "RONDONIA",
+    "RORAIMA", "SANTA CATARINA", "SERGIPE", "TOCANTINS"
+}
+
+_ALL_STATES_SET = _UF_SET | _STATE_ONLY_NAMES_SET | {"SAO PAULO", "RIO DE JANEIRO"}
+
 _NON_CITY_PATTERN = re.compile(
     r"\b(rua|av|avenida|rod|rodovia|estrada|travessa|alameda|praca|praça|cep|numero|número|s/n|"
     r"bairro|centro|complemento|referencia|referência|referencias|referências|latitude|longitude|"
@@ -143,6 +158,11 @@ def is_valid_city(val):
     val_clean = val.strip()
     if val_clean.upper() == "BASE DO PRESTADOR":
         return True
+    # Estado (UF de 2 letras ou nome de estado que não é cidade) nunca é uma cidade
+    if val_clean.upper() in _UF_SET:
+        return False
+    if strip_accents(val_clean).upper() in _STATE_ONLY_NAMES_SET:
+        return False
     # Uma cidade não contém pontuação de formulário (: ; , / \t | = () [] {} " ? ! * ~)
     if re.search(r"[:;,/\t|=()\[\]{}\"?*!~\\_]", val_clean):
         return False
@@ -253,7 +273,7 @@ def city_from_line(line):
 
 
 def extract_city_from_tabular_block(block):
-    """Extrai a cidade de uma tabela com colunas Bairro / Cidade / Estado."""
+    """Extrai a cidade de uma tabela com colunas Bairro / Cidade / Estado / CEP."""
     if not block:
         return None
     lines = [l.strip() for l in block.splitlines() if l.strip()]
@@ -261,17 +281,31 @@ def extract_city_from_tabular_block(block):
         if re.search(r"\bCidade\b", line, re.IGNORECASE) and re.search(r"\b(Bairro|Estado|CEP)\b", line, re.IGNORECASE):
             cols = [c.strip() for c in re.split(r"\t+|\s{2,}", line) if c.strip()]
             cidade_idx = next((idx for idx, c in enumerate(cols) if re.search(r"\bCidade\b", c, re.IGNORECASE)), None)
-            if cidade_idx is not None:
-                # Caso 1: Valores tab-separated na linha seguinte
-                if i + 1 < len(lines):
-                    next_cols = [c.strip() for c in re.split(r"\t+|\s{2,}", lines[i + 1]) if c.strip()]
-                    if len(next_cols) > cidade_idx:
-                        return clean_city(next_cols[cidade_idx])
-                # Caso 2: Cada coluna numa linha subsequente
-                if i + 1 + cidade_idx < len(lines):
-                    candidate = lines[i + 1 + cidade_idx]
-                    if not re.search(r"\d", candidate) and len(candidate) <= 50:
-                        return clean_city(candidate)
+            
+            # Caso 1: Valores tab-separated na linha seguinte
+            if i + 1 < len(lines):
+                next_cols = [c.strip() for c in re.split(r"\t+|\s{2,}", lines[i + 1]) if c.strip()]
+                if len(next_cols) > 1 and cidade_idx is not None and len(next_cols) > cidade_idx:
+                    cand = clean_city(next_cols[cidade_idx])
+                    if cand and is_valid_city(cand):
+                        return cand
+            
+            # Caso 2: Cada coluna numa linha subsequente
+            # O estado (UF de 2 letras ou por extenso) sucede a cidade. Se uma linha for estado, a anterior é a cidade.
+            sub_lines = lines[i + 1:i + 7]
+            for j, s_line in enumerate(sub_lines):
+                clean_s = s_line.strip().upper()
+                if (clean_s in _UF_SET or strip_accents(clean_s) in _ALL_STATES_SET) and j > 0:
+                    cand = clean_city(sub_lines[j - 1])
+                    if cand and is_valid_city(cand):
+                        return cand
+
+            # Fallback Caso 2: Pelo índice da coluna de cidade se válido e não-UF
+            if cidade_idx is not None and i + 1 + cidade_idx < len(lines):
+                cand = clean_city(lines[i + 1 + cidade_idx])
+                if cand and is_valid_city(cand):
+                    return cand
+
     return None
 
 
