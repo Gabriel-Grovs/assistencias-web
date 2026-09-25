@@ -9,3 +9,4 @@ dist/
 build/
 teste_sheets.py
 setup_sheets.py
+enviar_para_github.bat

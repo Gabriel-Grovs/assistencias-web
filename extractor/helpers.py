@@ -186,8 +186,31 @@ def city_from_line(line):
     return None
 
 
+def extract_city_from_tabular_block(block):
+    """Extrai a cidade de uma tabela com colunas Bairro / Cidade / Estado."""
+    if not block:
+        return None
+    lines = [l.strip() for l in block.splitlines() if l.strip()]
+    for i, line in enumerate(lines):
+        if re.search(r"\bCidade\b", line, re.IGNORECASE) and re.search(r"\b(Bairro|Estado|CEP)\b", line, re.IGNORECASE):
+            cols = [c.strip() for c in re.split(r"\t+|\s{2,}", line) if c.strip()]
+            cidade_idx = next((idx for idx, c in enumerate(cols) if re.search(r"\bCidade\b", c, re.IGNORECASE)), None)
+            if cidade_idx is not None:
+                # Caso 1: Valores tab-separated na linha seguinte
+                if i + 1 < len(lines):
+                    next_cols = [c.strip() for c in re.split(r"\t+|\s{2,}", lines[i + 1]) if c.strip()]
+                    if len(next_cols) > cidade_idx:
+                        return clean_city(next_cols[cidade_idx])
+                # Caso 2: Cada coluna numa linha subsequente
+                if i + 1 + cidade_idx < len(lines):
+                    candidate = lines[i + 1 + cidade_idx]
+                    if not re.search(r"\d", candidate) and len(candidate) <= 50:
+                        return clean_city(candidate)
+    return None
+
+
 def _block_after(text, block_label):
-    """Retorna o texto imediatamente após um rótulo de bloco (até ~5 linhas)."""
+    """Retorna o texto imediatamente após um rótulo de bloco (até ~15 linhas)."""
     if not text:
         return ""
     pattern = re.compile(accent_insensitive(block_label) + r"\s*[:=]?", re.IGNORECASE)
@@ -195,7 +218,7 @@ def _block_after(text, block_label):
     if not match:
         return ""
     rest = text[match.end():]
-    return "\n".join(rest.splitlines()[:5])
+    return "\n".join(rest.splitlines()[:15])
 
 
 def city_in_block(text, block_label):
@@ -203,6 +226,11 @@ def city_in_block(text, block_label):
     block = _block_after(text, block_label)
     if not block:
         return None
+
+    tabular_city = extract_city_from_tabular_block(block)
+    if tabular_city:
+        return tabular_city
+
     city = extract_city_field(block, 1)
     if city:
         return city

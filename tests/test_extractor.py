@@ -307,6 +307,40 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["DESTINO"], "Ituverava")
         self.assertEqual(r["KM TOTAL"], "413")
 
+    def test_yelum_real_portal_tabular(self):
+        texto = (
+            "Assistência\t\tSolicitação\t\tProduto\t\tData solicitação\n"
+            "9651512\n"
+            "2\n"
+            "YELUM\n"
+            "28/05/2026 12:16\n"
+            "SERVIÇO #1\n"
+            "GUINCHO - GUINCHO LEVE (AUTO)\n"
+            "ORIGEM\t\n"
+            "R. Orquídeas, 480, Capitólio - MG\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "Centro\n"
+            "Capitólio\n"
+            "MG\n"
+            "DESTINO\n"
+            "Av. Juca Stockler, 1777 - Passos, MG\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "Jardim Belo Horizonte\n"
+            "Passos\n"
+            "MG\n"
+            "SENHA\tTARIFA\tQUANTIDADE\n"
+            "107\tKM (EXCEDENTE)\t116\n"
+            "109\tSAÍDA\t1\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "YELUM")
+        self.assertEqual(r["ASSISTENCIA"], "9651512/2")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "Capitólio")
+        self.assertEqual(r["DESTINO"], "Passos")
+        self.assertEqual(r["KM TOTAL"], "156")
+        self.assertEqual(r["OBS"], "")
+
     def test_youse(self):
         texto = (
             "YOUSE SEGUROS\n"

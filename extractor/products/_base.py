@@ -21,16 +21,50 @@ from .. import km_calculator
 
 
 def set_assistencia(record, text, labels):
-    """Define ASSISTENCIA a partir do primeiro rótulo encontrado."""
-    record["ASSISTENCIA"] = labeled_value(text, labels) or ""
+    """Define ASSISTENCIA a partir de tabela ou rótulos, incluindo barra se houver."""
+    # 1. Padrão tabular com cabeçalho (ex.: Assistência \t Solicitação ...)
+    m = re.search(r"Assist[eê]ncia\s+Solicita[cç][aã]o", text or "", re.IGNORECASE)
+    if m:
+        rest = (text or "")[m.start():]
+        lines = [l.strip() for l in rest.splitlines() if l.strip()]
+        if len(lines) >= 3:
+            num = lines[1]
+            barra = lines[2]
+            if re.match(r"^\d+$", num):
+                if re.match(r"^\d+$", barra):
+                    record["ASSISTENCIA"] = f"{num}/{barra}"
+                    return
+                record["ASSISTENCIA"] = num
+                return
+
+    # 2. Padrão labeled_value (com ou sem barra)
+    val = labeled_value(text, labels)
+    if val:
+        solic = labeled_value(text, ["Solicitacao", "Solicitação", "Barra"])
+        if solic and "/" not in val and re.match(r"^\d+$", solic):
+            record["ASSISTENCIA"] = f"{val}/{solic}"
+        else:
+            record["ASSISTENCIA"] = val
+    else:
+        record["ASSISTENCIA"] = ""
 
 
 def set_categoria(record, text, label="Servico"):
-    """Define CATEGORIA a partir de um campo rotulado, adicionando OBS se preciso."""
+    """Define CATEGORIA a partir de SERVIÇO #1 ou campo rotulado."""
+    # 1. Padrão SERVIÇO #1 \n Nome do serviço
+    m = re.search(r"SERVI[ÇC]O\s*(?:#\d+)?\s*\n\s*([^\n]+)", text or "", re.IGNORECASE)
+    if m:
+        candidate = m.group(1).strip()
+        cat, obs = normalize_category(candidate)
+        if cat:
+            record["CATEGORIA"] = cat
+            return
+
+    # 2. Padrão labeled_value
     categoria, obs = normalize_category(labeled_value(text, label))
     if categoria:
         record["CATEGORIA"] = categoria
-    if obs:
+    elif obs:
         record["OBS"].append(obs)
 
 

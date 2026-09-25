@@ -22,10 +22,20 @@ _SCOPES = [
 
 def _authorized_client():
     """Cria o cliente gspread autenticado via Service Account."""
-    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
-    if not creds_json:
+    creds_raw = os.environ.get("GOOGLE_CREDENTIALS_JSON", "").strip()
+    if not creds_raw:
         raise RuntimeError("GOOGLE_CREDENTIALS_JSON nao configurada")
-    creds_info = json.loads(creds_json)
+
+    try:
+        creds_info = json.loads(creds_raw, strict=False)
+    except Exception:
+        # Se contiver quebras de linha literais não escapadas
+        cleaned = creds_raw.replace("\r\n", "\\n").replace("\n", "\\n")
+        creds_info = json.loads(cleaned, strict=False)
+
+    if isinstance(creds_info.get("private_key"), str) and "\\n" in creds_info["private_key"]:
+        creds_info["private_key"] = creds_info["private_key"].replace("\\n", "\n")
+
     credentials = Credentials.from_service_account_info(creds_info, scopes=_SCOPES)
     return gspread.authorize(credentials)
 
