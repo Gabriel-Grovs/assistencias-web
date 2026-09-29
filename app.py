@@ -77,3 +77,7 @@ def processar():
     sheet_result = append_row(record)
 
     return jsonify({"ok": True, "registro": record, "sheets": sheet_result})
+
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=False)

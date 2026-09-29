@@ -331,8 +331,10 @@ def city_in_block(text, block_label):
         if lbl_lower == "origem":
             m_orig = re.search(r"^[ \t]*ORIGEM\b.*$", parts[0], flags=re.IGNORECASE | re.MULTILINE)
             section = parts[0][m_orig.end():] if m_orig else ""
+            section = re.split(r"^[ \t]*(?:DESTINO|CLIENTE|VE[ÍI]CULO|PROBLEMA|IMPORTANTE|SERVI[ÇC]O)\b", section, flags=re.IGNORECASE | re.MULTILINE)[0]
         else:
             section = parts[1] if len(parts) > 1 else ""
+            section = re.split(r"^[ \t]*(?:SENHA|TARIFA|SERVI[ÇC]O|CLIENTE|HIST[ÓO]RICO)\b", section, flags=re.IGNORECASE | re.MULTILINE)[0]
 
         if section:
             tabular_city = extract_city_from_tabular_block(section)

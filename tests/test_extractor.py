@@ -471,6 +471,44 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["KM TOTAL"], "70")
         self.assertEqual(r["VALOR"], "212")
 
+    def test_hdi_tabular_base_do_prestador(self):
+        texto = (
+            "Assistência\t\tSolicitação\t\tProduto\t\tData solicitação\n"
+            "19920550\n"
+            "3\n"
+            "HDI SEGUROS S.A\n"
+            "29/09/2026 15:46\n"
+            "30/09/2026 11:59\n"
+            "SERVIÇO #1\n"
+            "GUINCHO - GUINCHO UTILITÁRIOS (PICK-UPS E SUV)\n"
+            "ORIGEM\n"
+            "Endereço\t\tComplemento\n"
+            "BASE DO PRESTADOR\n"
+            "BASE DO PRESTADOR\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "14860-00\n"
+            "Cliente\t\tTelefone\n"
+            "Ednaldo\n"
+            "(16) 997088500\n"
+            "DESTINO   É proibida a alteração de destino\n"
+            "Endereço\t\tComplemento\n"
+            "R. Dionísia Campos Gonçalves, 394 - Centro, Barrinha, SP - 14860-000\n"
+            "Bairro\t\tCidade\t\tEstado\t\tCEP\n"
+            "Centro\n"
+            "Barrinha\n"
+            "SP\n"
+            "SENHA\tTARIFA\tQUANTIDADE\n"
+            "737\tKM (EXCEDENTE)\t372\n"
+            "735\tSAÍDA\t1\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "HDI")
+        self.assertEqual(r["ASSISTENCIA"], "19920550/3")
+        self.assertEqual(r["CATEGORIA"], "UTILITARIO")
+        self.assertEqual(r["ORIGEM"], "BASE DO PRESTADOR")
+        self.assertEqual(r["DESTINO"], "Barrinha")
+        self.assertEqual(r["KM TOTAL"], "412")
+
     def test_unknown(self):
         texto = "Bom dia, pessoal!\nConversa interna sem dados de assistência."
         r = extract_record(texto)
