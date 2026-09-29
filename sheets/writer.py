@@ -39,16 +39,18 @@ def _normalize_private_key(pk):
         pk = pk.replace("\\\\n", "\n")
     pk = pk.replace("\\n", "\n").replace("\r", "\n")
 
-    # Extrai o corpo base64 entre cabeçalho e rodapé
-    match = re.search(r"-----BEGIN [A-Z ]+KEY-----(.*?)-----END [A-Z ]+KEY-----", pk, re.DOTALL)
+    # Extrai o corpo base64 e preserva o tipo exato (PRIVATE KEY ou RSA PRIVATE KEY)
+    match = re.search(r"-----BEGIN ([A-Z ]+KEY)-----(.*?)-----END \1-----", pk, re.DOTALL)
     if match:
-        body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group(1))
+        key_type = match.group(1).strip()
+        body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group(2))
     else:
+        key_type = "PRIVATE KEY"
         body = re.sub(r"[^A-Za-z0-9+/=]", "", pk)
 
     # Quebra o base64 em linhas padrão de 64 caracteres
     lines = [body[i : i + 64] for i in range(0, len(body), 64)]
-    return "-----BEGIN PRIVATE KEY-----\n" + "\n".join(lines) + "\n-----END PRIVATE KEY-----\n"
+    return f"-----BEGIN {key_type}-----\n" + "\n".join(lines) + f"\n-----END {key_type}-----\n"
 
 
 def _parse_credentials_info():
