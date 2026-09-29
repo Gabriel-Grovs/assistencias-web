@@ -29,7 +29,7 @@ def _normalize_private_key(pk):
     """Normaliza a chave privada PEM para o formato canônico.
 
     Corrige quebras de linha substituídas por espaços, caracteres de escape
-    múltiplos (\\n, \\\\n), cabeçalhos ausentes ou quebras CRLF do Windows.
+    múltiplos (\\n, \\\\n), cabeçalhos com hífens irregulares ou rodapés ausentes.
     """
     if not isinstance(pk, str):
         return pk
@@ -39,14 +39,16 @@ def _normalize_private_key(pk):
         pk = pk.replace("\\\\n", "\n")
     pk = pk.replace("\\n", "\n").replace("\r", "\n")
 
-    # Extrai o corpo base64 e preserva o tipo exato (PRIVATE KEY ou RSA PRIVATE KEY)
-    match = re.search(r"-----BEGIN ([A-Z ]+KEY)-----(.*?)-----END \1-----", pk, re.DOTALL)
-    if match:
-        key_type = match.group(1).strip()
-        body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group(2))
-    else:
-        key_type = "PRIVATE KEY"
-        body = re.sub(r"[^A-Za-z0-9+/=]", "", pk)
+    # Detecta tipo da chave (ex: RSA PRIVATE KEY ou PRIVATE KEY)
+    m_type = re.search(r"BEGIN\s+([A-Z ]*KEY)", pk, re.IGNORECASE)
+    key_type = m_type.group(1).upper().strip() if m_type else "PRIVATE KEY"
+
+    # Remove qualquer cabeçalho BEGIN... e rodapé END... para evitar vazamento no base64
+    clean = re.sub(r"[-—–]*\s*BEGIN[^-—–\n\r]*[-—–]*", "", pk, flags=re.IGNORECASE)
+    clean = re.sub(r"[-—–]*\s*END[^-—–\n\r]*[-—–]*", "", clean, flags=re.IGNORECASE)
+
+    # Extrai estritamente os caracteres base64 válidos
+    body = re.sub(r"[^A-Za-z0-9+/=]", "", clean)
 
     # Quebra o base64 em linhas padrão de 64 caracteres
     lines = [body[i : i + 64] for i in range(0, len(body), 64)]
