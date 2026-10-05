@@ -22,6 +22,10 @@ def identify(text):
     # Remove marcação de negrito/itálico do WhatsApp (*, _)
     clean_text = re.sub(r"[*_~]", "", normalized)
 
+    # MAXPAR: marca explícita
+    if re.search(r"\bMAXPAR\b", clean_text):
+        return "maxpar"
+
     # TOKIO: marca explícita ou padrão de Ordem de Serviço com OS
     if re.search(r"\bTOKIO\b", clean_text) or re.search(r"\bTOKIO MARINE\b", clean_text):
         return "tokio"
@@ -51,6 +55,7 @@ def identify(text):
         ("yelum", ["YELUM"]),
         ("youse", ["YOUSE SEGUROS", "YOUSE"]),
         ("unidas", ["UNIDAS"]),
+        ("maxpar", ["TOTAL MAXPAR", "MAXPAR"]),
     ]
 
     for key, patterns in rules:

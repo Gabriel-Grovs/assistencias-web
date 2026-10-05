@@ -31,6 +31,7 @@ _PRODUCT_MODULES = {
     "yelum": "yelum",
     "youse": "youse",
     "unidas": "unidas",
+    "maxpar": "maxpar",
     "unknown": "unknown",
 }
 
@@ -42,7 +43,7 @@ def extract_record(text):
     module = importlib.import_module("extractor.products." + module_name)
     record = module.extract(text)
 
-    if not record.get("DATA"):
+    if key != "maxpar" and not record.get("DATA"):
         record["DATA"] = extract_data(text)
 
     for col in COLUMNS:

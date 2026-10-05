@@ -509,6 +509,67 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["DESTINO"], "Barrinha")
         self.assertEqual(r["KM TOTAL"], "412")
 
+    def test_maxpar(self):
+        texto = (
+            "Informações\n"
+            "Ver atividades\n"
+            "Valor total\n"
+            "R$ 332,50\n"
+            "Item cobertura\n"
+            "Instalacao De Pneu Estepe\n"
+            "Ordem de serviço\n"
+            "A26100384807/1\n"
+            "Cliente\n"
+            "Sancor\n"
+            "Percurso total\n"
+            "112.9 km\n"
+            "Origem\n"
+            "Avenida Ângelo Calafiori, 857, MOCOQUINHA, São Sebastião do Paraíso / MG\n"
+            "Total Maxpar\n"
+            "R$\n"
+            "332,50\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["PRODUTO"], "maxpar")
+        self.assertEqual(r["CLIENTE"], "")
+        self.assertEqual(r["ASSISTENCIA"], "A26100384807/1")
+        self.assertEqual(r["CATEGORIA"], "TROCA PNEU")
+        self.assertEqual(r["ORIGEM"], "São Sebastião do Paraíso")
+        self.assertEqual(r["DESTINO"], "")
+        self.assertEqual(r["KM TOTAL"], "112,9")
+        self.assertEqual(r["VALOR"], "332,50")
+        self.assertEqual(r["DATA"], "")
+        self.assertIn("DATA IMPOSSIVEL DE IDENTIFICAR; ANALISE MANUAL", r["OBS"])
+
+    def test_maxpar_with_header_date(self):
+        texto = (
+            "05/10/2026 12:30 - Maxpar:\n"
+            "Item cobertura\n"
+            "Reboque leve\n"
+            "Ordem de serviço\n"
+            "OS9988/2\n"
+            "Origem\n"
+            "Rua A, 100 - Passos - MG\n"
+            "Destino\n"
+            "Rua B, 200 - Alpinópolis - MG\n"
+            "Percurso total\n"
+            "45 km\n"
+            "Valor total\n"
+            "R$ 250,00\n"
+            "Total Maxpar\n"
+            "R$ 250,00\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["PRODUTO"], "maxpar")
+        self.assertEqual(r["DATA"], "05/10/2026")
+        self.assertEqual(r["ASSISTENCIA"], "OS9988/2")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "Passos")
+        self.assertEqual(r["DESTINO"], "Alpinópolis")
+        self.assertEqual(r["KM TOTAL"], "45")
+        self.assertEqual(r["VALOR"], "250,00")
+        self.assertIn("ANALISE MANUAL", r["OBS"])
+
     def test_unknown(self):
         texto = "Bom dia, pessoal!\nConversa interna sem dados de assistência."
         r = extract_record(texto)
