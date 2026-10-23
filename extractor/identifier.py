@@ -56,6 +56,9 @@ def identify(text):
         ("youse", ["YOUSE SEGUROS", "YOUSE"]),
         ("unidas", ["UNIDAS"]),
         ("maxpar", ["TOTAL MAXPAR", "MAXPAR"]),
+        ("europ", ["EUROP", "SEM PARAR INSTITUICAO DE PAGAMENTO", "SEM PARAR"]),
+        ("pier", ["PIER SEGUROS", "PIER"]),
+        ("renault", ["RENAULT", "RNAULT"]),
     ]
 
     for key, patterns in rules:

@@ -570,6 +570,68 @@ class ProductExtractionTests(unittest.TestCase):
         self.assertEqual(r["VALOR"], "250,00")
         self.assertIn("ANALISE MANUAL", r["OBS"])
 
+    def test_europ(self):
+        texto = (
+            "EUROP ASSISTANCE\n"
+            "Contratante: SEM PARAR INSTITUICAO DE PAGAMENTO LTDA\n"
+            "# Serviço: 554433\n"
+            "Tipo de serviço: REBOQUE - LEVE\n"
+            "LOCAIS DO ATENDIMENTO\n"
+            "(1) Av. Brasil, 100 - Centro, Ribeirão Preto - SP\n"
+            "(2) Rua das Flores, 200 - Sertãozinho - SP\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "EUROP")
+        self.assertEqual(r["ASSISTENCIA"], "554433")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "Ribeirão Preto")
+        self.assertEqual(r["DESTINO"], "Sertãozinho")
+        self.assertEqual(r["KM TOTAL"], "")
+        self.assertEqual(r["VALOR"], "")
+
+    def test_pier(self):
+        texto = (
+            "PIER SEGUROS\n"
+            "Assistência: 998877\n"
+            "Solicitação: 1\n"
+            "Aceito em: 15/10/2026 14:30\n"
+            "Serviço: REBOQUE/UTILITÁRIO\n"
+            "Local:\n"
+            "Cidade: Franca\n"
+            "Estado: SP\n"
+            "Destino:\n"
+            "Cidade: Batatais\n"
+            "Estado: SP\n"
+            "KM Total: 85\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "PIER")
+        self.assertEqual(r["DATA"], "15/10/2026")
+        self.assertEqual(r["ASSISTENCIA"], "998877")
+        self.assertEqual(r["CATEGORIA"], "UTILITARIO")
+        self.assertEqual(r["ORIGEM"], "Franca")
+        self.assertEqual(r["DESTINO"], "Batatais")
+        self.assertEqual(r["KM TOTAL"], "85")
+
+    def test_renault(self):
+        texto = (
+            "RENAULT ASSISTANCE\n"
+            "Assistência: 112233\n"
+            "Serviço: REBOQUE PLATAFORMA\n"
+            "Local:\n"
+            "Cidade: São José do Rio Preto\n"
+            "Destino:\n"
+            "Cidade: Mirassol\n"
+            "KM Total: 35\n"
+        )
+        r = extract_record(texto)
+        self.assertEqual(r["CLIENTE"], "RENAULT")
+        self.assertEqual(r["ASSISTENCIA"], "112233")
+        self.assertEqual(r["CATEGORIA"], "LEVE")
+        self.assertEqual(r["ORIGEM"], "São José do Rio Preto")
+        self.assertEqual(r["DESTINO"], "Mirassol")
+        self.assertEqual(r["KM TOTAL"], "35")
+
     def test_unknown(self):
         texto = "Bom dia, pessoal!\nConversa interna sem dados de assistência."
         r = extract_record(texto)

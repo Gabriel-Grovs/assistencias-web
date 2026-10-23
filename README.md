@@ -6,12 +6,23 @@ uma linha no Google Sheets.
 
 ## Funcionalidades
 
-- Login por senha (variável de ambiente `APP_PASSWORD`).
-- Identificação automática do produto pelo conteúdo do texto (18 produtos).
-- Extração de DATA, CLIENTE, ASSISTENCIA, CATEGORIA, ORIGEM, DESTINO, KM TOTAL,
-  VALOR e OBS.
-- Gravação no Google Sheets via Service Account (`gspread`).
-- Exibição do resultado com destaque visual em ORIGEM e DESTINO.
+- **Segurança Reforçada no Acesso**:
+  - Proteção contra Timing Attacks com comparação em tempo constante (`hmac.compare_digest`).
+  - Proteção contra Força Bruta com Rate Limiting por IP (bloqueio automático de 15 minutos após 5 falhas consecutivas - HTTP 429).
+  - Proteção contra SQL Injection, Null-Byte e Malicious Payloads na tela de autenticação e rotas de processamento.
+  - Cookies de Sessão seguros (`HttpOnly`, `SameSite=Lax`, `Secure` em produção) e proteção contra Session Fixation.
+  - Cabeçalhos HTTP de segurança estritos injetados via middleware (CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy).
+- **Identificação Automática Universal (23 Produtos Homologados)**:
+  - Allianz, Azul, Bradesco, Caoa Chery, FCA Fiat, HDI, Movida, Porto, Resolve Assist, Santander, Suhai, Sura, Tato Assist, Tokio, Universo AGV, Velox, Yelum, Youse, Unidas, Maxpar, Europ, Pier, Renault.
+- **Extração Precisa e Padronizada**:
+  - `DATA`, `CLIENTE`, `ASSISTENCIA`, `CATEGORIA`, `ORIGEM`, `DESTINO`, `KM TOTAL`, `VALOR` e `OBS`.
+  - Normalização para vocabulário controlado de categorias.
+  - Higienização e sanitização rigorosa de municípios (sem vazamento de dados de clientes, segurados ou veículos - LGPD).
+  - Modelos matemáticos de KM (A: explícito, B: percurso total, C: 40 + deslocamento + excedente).
+- **Persistência Confiável no Google Sheets**:
+  - Conexão via Service Account (`gspread`), garantindo integridade das 11 colunas e compatibilidade com fórmulas do Google Sheets.
+- **Base de Conhecimento e Skills**:
+  - Documentação completa das 28 especificações e procedimentos operacionais em `docs/skills/`.
 
 ## Estrutura
 
@@ -107,11 +118,13 @@ Há um caso de teste por produto com texto de exemplo fictício.
 
 ## Regras de extração
 
-As regras completas estão documentadas em `F:\rules\`. Em resumo:
+As regras completas e configurações de cada portal estão documentadas em `docs/skills/`. Em resumo:
 
+- **Documentação de Skills**: Disponível em `docs/skills/` (procedimentos gerais, schemas, laudos digitais, plataformas operacionais e regras específicas de cada portal).
 - **Nunca inventar** dados ausentes; usar `ANALISE MANUAL` em OBS quando houver
   incerteza.
-- **DATA** = data da mensagem; nunca usar "Data Abertura"/"Aceito em".
+- **DATA** = data de envio da mensagem no grupo (ou data explícita de "Aceito em" quando a regra do produto exigir, como PIER); nunca usar "Data Abertura" aleatória.
 - **KM** segue três modelos: A (só explícito), B (Percurso Total) e C
-  (40 + deslocamento + excedente).
+  (40 saída + deslocamento + excedente).
 - **VALOR** é preenchido somente quando permitido e explícito por produto.
+- **LGPD e Privacidade**: Omissão estrita de nomes de segurados, condutores, placas, chassis e contatos pessoais.

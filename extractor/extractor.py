@@ -32,6 +32,9 @@ _PRODUCT_MODULES = {
     "youse": "youse",
     "unidas": "unidas",
     "maxpar": "maxpar",
+    "europ": "europ",
+    "pier": "pier",
+    "renault": "renault",
     "unknown": "unknown",
 }
 
