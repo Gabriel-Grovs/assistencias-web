@@ -121,3 +121,30 @@ def append_row(record):
         return {"ok": True, "linha": total}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "erro": str(exc)}
+
+
+def append_rows(records, tab=None):
+    """Anexa múltiplas linhas em lote ao final da planilha via gspread append_rows.
+
+    Retorna ``{"ok": True, "total_inseridas": N, "linha_final": M}`` ou
+    ``{"ok": False, "erro": ...}`` em caso de falha.
+    """
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID") or "1OMof37tDGTYj0JKV2A34QN42OB49en6B0Ro1w5tDwl8"
+    tab_name = tab or os.environ.get("GOOGLE_SHEET_TAB") or "Assistencias"
+
+    if not sheet_id:
+        return {"ok": False, "erro": "GOOGLE_SHEET_ID nao configurada"}
+
+    try:
+        client = _authorized_client()
+        sheet = client.open_by_key(sheet_id)
+        worksheet = sheet.worksheet(tab_name)
+        rows = [[rec.get(col, "") for col in COLUMNS] for rec in records]
+        if not rows:
+            return {"ok": True, "total_inseridas": 0}
+
+        worksheet.append_rows(rows, value_input_option="USER_ENTERED")
+        total = len(worksheet.get_all_values())
+        return {"ok": True, "total_inseridas": len(rows), "linha_final": total}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "erro": str(exc)}
